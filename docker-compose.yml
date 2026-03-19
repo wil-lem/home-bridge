@@ -15,23 +15,8 @@ services:
     volumes:
       - ./:/app
       - ./docker/mysql.cnf:/etc/my.cnf
-    networks:
-      - traefik-network
     user: ${USER_ID:-1000}:${GROUP_ID:-1000}
-    depends_on:
-      - redis
-
-  # Redis service
-  redis:
-    image: redis:7-alpine
-    container_name: home_bridge_redis
-    restart: always
-    networks:
-      - traefik-network
-    command: redis-server --appendonly yes
-    volumes:
-      - redis-data:/data
-
+      
   # Web server (Nginx)
   home_bridge_nginx:
     image: nginx:latest
@@ -42,14 +27,5 @@ services:
     volumes:
       - ./:/app:ro
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    networks:
-      - traefik-network
     depends_on:
       - home_bridge_php
-networks:
-  traefik-network:
-    external: true
-
-volumes:
-  redis-data:
-    driver: local
