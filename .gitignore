@@ -1,0 +1,8 @@
+.bash_history
+.composer/
+.config/
+.mariadb_history
+.my.cnf
+.ssh/
+keys/*
+
