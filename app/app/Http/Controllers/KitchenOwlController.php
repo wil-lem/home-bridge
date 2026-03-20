@@ -80,7 +80,6 @@ class KitchenOwlController extends Controller
                         'description' => 'Call this to add a new item to the shopping list. Use when the user says "add X to my shopping list" or "I need to buy X". Optionally include a description for details like quantity or brand.',
                         'operationId' => 'addItemToShoppingList',
                         'requestBody' => [
-                            'required' => true,
                             'content' => [
                                 'application/json' => [
                                     'schema' => [
@@ -117,7 +116,7 @@ class KitchenOwlController extends Controller
                                             ],
                                         ],
                                         'example' => [
-                                            'success' => true,
+                                            'success' => 1,
                                             'message' => 'Item added successfully',
                                         ],
                                     ],
@@ -154,7 +153,7 @@ class KitchenOwlController extends Controller
                                             ],
                                         ],
                                         'example' => [
-                                            'success' => true,
+                                            'success' => 1,
                                             'message' => 'Item removed successfully',
                                         ],
                                     ],
