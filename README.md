@@ -36,7 +36,21 @@ HOME_ASSISTANT_API_KEY=your_long_lived_access_token
 docker-compose up -d
 ```
 
-### 3. Access the API
+### 3. Install Dependencies and Generate Application Key
+
+```bash
+# Install PHP dependencies
+docker exec -it home_bridge_php composer install
+
+# Generate application key
+docker exec -it home_bridge_php php artisan key:generate
+
+# Create required directories
+docker exec -it home_bridge_php mkdir -p storage/framework/{sessions,views,cache}
+docker exec -it home_bridge_php chmod -R 775 storage bootstrap/cache
+```
+
+### 4. Access the API
 
 The API will be available at: **http://localhost:8383/api**
 
@@ -45,7 +59,7 @@ Test it:
 curl http://localhost:8383/api/status
 ```
 
-### 4. Use the Web Interface
+### 5. Use the Web Interface
 
 Access the interactive web interface at: **http://localhost:8383**
 
