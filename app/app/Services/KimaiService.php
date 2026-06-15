@@ -81,6 +81,57 @@ class KimaiService
     }
 
     /**
+     * Get a human-readable summary of what the user is currently working on.
+     */
+    public function getCurrentWorkSummary(?int $userId = null, ?string $timezone = null): string
+    {
+        if (!$this->isConfigured()) {
+            throw new \Exception('Kimai is not fully configured. Please set KIMAI_URL, KIMAI_USERNAME and KIMAI_ACCESS_TOKEN.');
+        }
+
+        $tz = $timezone ?: (string) config('app.timezone', 'UTC');
+        $now = CarbonImmutable::now($tz);
+        $effectiveUserId = $userId ?? $this->userId;
+
+        // Include a short history window in case an active entry started yesterday.
+        $entries = $this->getTimesheetsForRange($now->subDays(2)->startOfDay(), $now->endOfDay(), $effectiveUserId);
+
+        $activeEntries = array_values(array_filter($entries, function ($entry) use ($now, $tz) {
+            if (!empty($entry['end'])) {
+                return false;
+            }
+
+            if (empty($entry['begin'])) {
+                return false;
+            }
+
+            $begin = CarbonImmutable::parse($entry['begin'])->setTimezone($tz);
+            return $begin->lessThanOrEqualTo($now);
+        }));
+
+        if (empty($activeEntries)) {
+            return 'Not tracking time';
+        }
+
+        usort($activeEntries, function ($a, $b) {
+            return strcmp((string) ($b['begin'] ?? ''), (string) ($a['begin'] ?? ''));
+        });
+
+        $entry = $activeEntries[0];
+        $project = (string) ($entry['project']['name'] ?? '');
+        $activity = (string) ($entry['activity']['name'] ?? '');
+        $description = trim((string) ($entry['description'] ?? ''));
+
+        $parts = array_values(array_filter([$project, $activity], fn ($value) => $value !== ''));
+        if (!empty($parts)) {
+            $summary = implode(' - ', $parts);
+            return $description !== '' ? $summary . ': ' . $description : $summary;
+        }
+
+        return $description !== '' ? $description : 'Timer running';
+    }
+
+    /**
      * Get timesheet entries for a date range.
      */
     protected function getTimesheetsForRange(CarbonImmutable $begin, CarbonImmutable $end, ?int $userId = null): array
