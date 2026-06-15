@@ -28,7 +28,7 @@ Artisan::command('kimai:test {--user=} {--timezone=}', function () {
             'status' => $configured ? 'PASS' : 'FAIL',
             'details' => $configured
                 ? 'Kimai configuration is present'
-                : 'Missing one or more required env values: KIMAI_URL, KIMAI_USERNAME, KIMAI_ACCESS_TOKEN',
+                : 'Missing one or more required env values: KIMAI_URL, KIMAI_ACCESS_TOKEN',
         ];
     } catch (\Throwable $e) {
         $configured = false;

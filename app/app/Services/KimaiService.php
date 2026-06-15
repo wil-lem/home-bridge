@@ -17,7 +17,7 @@ class KimaiService
     {
         $this->url = rtrim((string) config('kimai.url'), '/');
         $this->username = (string) config('kimai.username');
-        $this->accessToken = (string) config('kimai.access_token');
+        $this->accessToken = $this->normalizeToken((string) config('kimai.access_token'));
 
         $configuredUserId = config('kimai.user_id');
         $this->userId = is_numeric($configuredUserId) ? (int) $configuredUserId : null;
@@ -28,7 +28,7 @@ class KimaiService
      */
     public function isConfigured(): bool
     {
-        return !empty($this->url) && !empty($this->username) && !empty($this->accessToken);
+        return !empty($this->url) && !empty($this->accessToken);
     }
 
     /**
@@ -37,7 +37,7 @@ class KimaiService
     public function getTodayLoggedHours(?int $userId = null, ?string $timezone = null): float
     {
         if (!$this->isConfigured()) {
-            throw new \Exception('Kimai is not fully configured. Please set KIMAI_URL, KIMAI_USERNAME and KIMAI_ACCESS_TOKEN.');
+            throw new \Exception('Kimai is not fully configured. Please set KIMAI_URL and KIMAI_ACCESS_TOKEN.');
         }
 
         $tz = $timezone ?: (string) config('app.timezone', 'UTC');
@@ -86,7 +86,7 @@ class KimaiService
     public function getCurrentWorkSummary(?int $userId = null, ?string $timezone = null): string
     {
         if (!$this->isConfigured()) {
-            throw new \Exception('Kimai is not fully configured. Please set KIMAI_URL, KIMAI_USERNAME and KIMAI_ACCESS_TOKEN.');
+            throw new \Exception('Kimai is not fully configured. Please set KIMAI_URL and KIMAI_ACCESS_TOKEN.');
         }
 
         $tz = $timezone ?: (string) config('app.timezone', 'UTC');
@@ -142,10 +142,13 @@ class KimaiService
 
         do {
             $query = [
-                'begin' => $begin->toIso8601String(),
-                'end' => $end->toIso8601String(),
+                'begin' => $begin->format('Y-m-d\\TH:i:s'),
+                'end' => $end->format('Y-m-d\\TH:i:s'),
                 'page' => $page,
                 'size' => $size,
+                'full' => '1',
+                'orderBy' => 'begin',
+                'order' => 'DESC',
             ];
 
             if (!is_null($userId)) {
@@ -154,7 +157,8 @@ class KimaiService
 
             $response = $this->makeRequest('/api/timesheets', $query);
             if (!$response->successful()) {
-                throw new \Exception('Failed to fetch timesheets from Kimai. Status: ' . $response->status());
+                $body = trim((string) $response->body());
+                throw new \Exception('Failed to fetch timesheets from Kimai. Status: ' . $response->status() . ($body !== '' ? ' Body: ' . $body : ''));
             }
 
             $entries = $response->json() ?? [];
@@ -175,10 +179,30 @@ class KimaiService
     protected function makeRequest(string $endpoint, array $query = []): Response
     {
         return Http::withHeaders([
-            // 'X-AUTH-USER' => $this->username,
-            // 'X-AUTH-TOKEN' => $this->accessToken,
             'Authorization' => 'Bearer ' . $this->accessToken,
             'Accept' => 'application/json',
         ])->get($this->url . $endpoint, $query);
+    }
+
+    /**
+     * Strip optional wrapping quotes and leading "Bearer " from configured token.
+     */
+    protected function normalizeToken(string $token): string
+    {
+        $clean = trim($token);
+
+        if (str_starts_with($clean, 'Bearer ')) {
+            $clean = substr($clean, 7);
+        }
+
+        if (strlen($clean) >= 2) {
+            $first = $clean[0];
+            $last = $clean[strlen($clean) - 1];
+            if (($first === '"' && $last === '"') || ($first === "'" && $last === "'")) {
+                $clean = substr($clean, 1, -1);
+            }
+        }
+
+        return trim($clean);
     }
 }
