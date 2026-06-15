@@ -228,10 +228,21 @@ class KimaiService
      */
     protected function makeRequest(string $endpoint, array $query = []): Response
     {
-        return Http::withHeaders([
+        $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->accessToken,
             'Accept' => 'application/json',
         ])->get($this->url . $endpoint, $query);
+
+        // Some Kimai setups reject bearer auth on plain HTTP but accept HTTPS.
+        if ($response->status() === 401 && str_starts_with($this->url, 'http://')) {
+            $httpsUrl = 'https://' . substr($this->url, strlen('http://'));
+            return Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->accessToken,
+                'Accept' => 'application/json',
+            ])->get($httpsUrl . $endpoint, $query);
+        }
+
+        return $response;
     }
 
     /**
