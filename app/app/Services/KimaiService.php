@@ -175,8 +175,9 @@ class KimaiService
     protected function makeRequest(string $endpoint, array $query = []): Response
     {
         return Http::withHeaders([
-            'X-AUTH-USER' => $this->username,
-            'X-AUTH-TOKEN' => $this->accessToken,
+            // 'X-AUTH-USER' => $this->username,
+            // 'X-AUTH-TOKEN' => $this->accessToken,
+            'Authorization' => 'Bearer ' . $this->accessToken,
             'Accept' => 'application/json',
         ])->get($this->url . $endpoint, $query);
     }
