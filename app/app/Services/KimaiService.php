@@ -32,6 +32,56 @@ class KimaiService
     }
 
     /**
+     * Return sanitized configuration values for troubleshooting.
+     */
+    public function getDebugConfig(): array
+    {
+        return [
+            'url' => $this->url,
+            'username_present' => $this->username !== '',
+            'token_present' => $this->accessToken !== '',
+            'token_length' => strlen($this->accessToken),
+            'token_preview' => $this->maskToken($this->accessToken),
+            'default_user_id' => $this->userId,
+        ];
+    }
+
+    /**
+     * Run a lightweight request and return detailed diagnostics.
+     */
+    public function getTimesheetDiagnostics(?int $userId = null): array
+    {
+        $query = [
+            'page' => 1,
+            'size' => 1,
+            'full' => '1',
+            'orderBy' => 'begin',
+            'order' => 'DESC',
+        ];
+
+        $effectiveUserId = $userId ?? $this->userId;
+        if (!is_null($effectiveUserId)) {
+            $query['user'] = $effectiveUserId;
+        }
+
+        $baseUrl = $this->url . '/api/timesheets';
+        $attempts = [];
+
+        $attempts[] = $this->runDiagnosticAttempt($baseUrl, $query, 'configured_url');
+
+        if (str_starts_with($this->url, 'http://')) {
+            $httpsUrl = 'https://' . substr($this->url, strlen('http://')) . '/api/timesheets';
+            $attempts[] = $this->runDiagnosticAttempt($httpsUrl, $query, 'https_variant');
+        }
+
+        return [
+            'config' => $this->getDebugConfig(),
+            'query' => $query,
+            'attempts' => $attempts,
+        ];
+    }
+
+    /**
      * Get total logged hours for today.
      */
     public function getTodayLoggedHours(?int $userId = null, ?string $timezone = null): float
@@ -185,6 +235,43 @@ class KimaiService
     }
 
     /**
+     * Run one HTTP attempt and capture key request/response fields.
+     */
+    protected function runDiagnosticAttempt(string $url, array $query, string $label): array
+    {
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->accessToken,
+                'Accept' => 'application/json',
+            ])->get($url, $query);
+
+            $body = trim((string) $response->body());
+            return [
+                'attempt' => $label,
+                'request_url' => $url,
+                'request_query' => $query,
+                'status' => $response->status(),
+                'location' => $response->header('Location'),
+                'content_type' => $response->header('Content-Type'),
+                'ok' => $response->successful(),
+                'body_excerpt' => mb_substr($body, 0, 500),
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'attempt' => $label,
+                'request_url' => $url,
+                'request_query' => $query,
+                'status' => null,
+                'location' => null,
+                'content_type' => null,
+                'ok' => false,
+                'body_excerpt' => null,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Strip optional wrapping quotes and leading "Bearer " from configured token.
      */
     protected function normalizeToken(string $token): string
@@ -204,5 +291,19 @@ class KimaiService
         }
 
         return trim($clean);
+    }
+
+    protected function maskToken(string $token): string
+    {
+        $length = strlen($token);
+        if ($length === 0) {
+            return '';
+        }
+
+        if ($length <= 8) {
+            return str_repeat('*', $length);
+        }
+
+        return substr($token, 0, 4) . str_repeat('*', $length - 8) . substr($token, -4);
     }
 }
