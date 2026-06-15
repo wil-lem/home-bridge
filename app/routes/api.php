@@ -8,6 +8,7 @@ use App\Http\Controllers\SwitchesController;
 use App\Http\Controllers\SensorsController;
 use App\Http\Controllers\ClimateController;
 use App\Http\Controllers\KitchenOwlController;
+use App\Http\Controllers\ScreenController;
 use Illuminate\Support\Facades\Route;
 
 // System status
@@ -59,4 +60,7 @@ Route::post('/kitchenowl/shopping-lists/{listId}/items', [KitchenOwlController::
 Route::delete('/kitchenowl/shopping-lists/{listId}/items/{itemId}', [KitchenOwlController::class, 'removeItem']);
 Route::get('/kitchenowl/recipes', [KitchenOwlController::class, 'recipes']);
 Route::get('/kitchenowl/recipes/{recipeId}', [KitchenOwlController::class, 'recipe']);
+
+// Screen
+Route::post('/screen/all', [ScreenController::class, 'all']);
 
