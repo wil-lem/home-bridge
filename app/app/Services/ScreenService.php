@@ -61,6 +61,14 @@ class ScreenService
                     'description' => 'Live Home Assistant values',
                     'items' => [
                         [
+                            'type' => 'text',
+                            'x' => 10,
+                            'y' => 10,
+                            'size' => 2,
+                            'color' => 65535,
+                            'text' => '< Back',
+                        ],
+                        [
                             'type' => 'value',
                             'x' => 10,
                             'y' => 44,
